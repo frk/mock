@@ -1,17 +1,20 @@
 package mock
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
-	"testing"
 )
+
+type skip int
+
+const X skip = 0
 
 // Call represents a call to one of the mocked functions/methods.
 type Call struct {
 	Func string // The name of the function/method that was or is expected to be called.
 	In   Vs     // The input values that were or are expected to be passed to the Func called.
 	Out  Vs     // The output values the called Func should return.
+	Set  Vs     // The values to be set to the call's passed in arguments by pointer indirection.
 }
 
 // match is a helper method that checks whether the given Call has
@@ -24,7 +27,27 @@ func (c Call) match(k Call) bool {
 type Context struct {
 	want []Call
 	got  []Call
+	res  []bool
 	nth  int
+}
+
+// New allocates and returns a new Context.
+func New() *Context {
+	return &Context{}
+}
+
+// Want allocates and returns a new Context with the given Call registered
+// as expected by that Context.
+func Want(c Call) *Context {
+	return Wants([]Call{c})
+}
+
+// Wants allocates and returns a new Context with the given list of Calls
+// registered as expected by that Context in that particular order.
+func Wants(cs []Call) *Context {
+	ctx := New()
+	ctx.want = append(ctx.want, cs...)
+	return ctx
 }
 
 // Want registers the given Call c as a call that the Context expects to happen.
@@ -34,7 +57,7 @@ func (ctx *Context) Want(c Call) {
 
 // Wants registers the given slice of Calls as calls that the Context expects
 // to happen. The Calls will be expected to happend in the same order in which
-// they are inside the slice.
+// they are provided in the slice.
 func (ctx *Context) Wants(cs []Call) {
 	ctx.want = append(ctx.want, cs...)
 }
@@ -42,40 +65,52 @@ func (ctx *Context) Wants(cs []Call) {
 // Got registers the Call received and returns the return value of a matching
 // expected Call, if there is no matching expected call it will return nil.
 func (ctx *Context) Got(got Call) Vs {
+	return ctx.match(got).Out
+}
+
+// match returns the matching expected Call to the given actual Call.
+func (ctx *Context) match(got Call) Call {
+	var ok bool
 	var want Call
 	if ln := len(ctx.got); ln < len(ctx.want) {
 		if w := ctx.want[ln]; w.match(got) {
 			want = w
+			ok = true
 		}
 	}
 	ctx.got = append(ctx.got, got)
-	return want.Out
+	ctx.res = append(ctx.res, ok)
+
+	for i, val := range want.Set {
+		if val == X {
+			continue
+		}
+
+		wv := reflect.ValueOf(val)
+		gv := reflect.ValueOf(got.Set[i])
+
+		if gv.Kind() == reflect.Ptr && (gv.Elem().Type() == wv.Type()) {
+			gv.Elem().Set(wv)
+		}
+	}
+	return want
 }
 
-// Check
-func (ctx *Context) Check(t *testing.T) {
-	if len(ctx.got) != len(ctx.want) {
-		t.Errorf("mock.Context: got %d calls, want %d.", len(ctx.got), len(ctx.want))
-		return
+func (ctx *Context) Err() error {
+	if got, want := len(ctx.got), len(ctx.want); got != want {
+		return &BadNumCallError{got: got, want: want}
 	}
-
 	for i, want := range ctx.want {
 		got := ctx.got[i]
 
 		if got.Func != want.Func {
-			t.Errorf("mock.Context: Call Func got %q, want %q", got.Func, want.Func)
-		} else if !reflect.DeepEqual(got.In, want.In) {
-			gotin, err := json.Marshal(got.In)
-			if err != nil {
-				panic(fmt.Sprintf("mock.Context.Check: error marshaling Call.In to json %v\n", err))
-			}
-			wantin, err := json.Marshal(want.In)
-			if err != nil {
-				panic(fmt.Sprintf("mock.Context.Check: error marshaling Call.In to json %v\n", err))
-			}
-			t.Errorf("mock.Context: %q Call In\n got: %s\nwant: %s", got.Func, gotin, wantin)
+			return &BadFuncCallError{got: got.Func, want: want.Func}
+		}
+		if !reflect.DeepEqual(got.In, want.In) {
+			return &BadCallInputError{fn: got.Func, got: got.In, want: want.In}
 		}
 	}
+	return nil
 }
 
 type Vs []interface{}
