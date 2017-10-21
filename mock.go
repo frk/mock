@@ -1,7 +1,6 @@
 package mock
 
 import (
-	"fmt"
 	"reflect"
 )
 
@@ -119,7 +118,6 @@ func (vs Vs) ValueAt(index int) interface{} {
 	if len(vs) > index {
 		return vs[index]
 	}
-	panic(fmt.Sprintf("mock.Vs.ValueAt: no value at index %d. (%#v)", index, vs))
 	return nil
 }
 
@@ -129,7 +127,6 @@ func (vs Vs) BoolAt(index int) bool {
 			return v
 		}
 	}
-	panic(fmt.Sprintf("mock.Vs.BoolAt: no bool at index %d. (%#v)", index, vs))
 	return false
 }
 
@@ -139,7 +136,6 @@ func (vs Vs) IntAt(index int) int {
 			return v
 		}
 	}
-	panic(fmt.Sprintf("mock.Vs.IntAt: no int at index %d. (%#v)", index, vs))
 	return 0
 }
 
@@ -149,7 +145,6 @@ func (vs Vs) Float64At(index int) float64 {
 			return v
 		}
 	}
-	panic(fmt.Sprintf("mock.Vs.Float64At: no float64 at index %d. (%#v)", index, vs))
 	return 0
 }
 
@@ -159,7 +154,6 @@ func (vs Vs) StringAt(index int) string {
 			return v
 		}
 	}
-	panic(fmt.Sprintf("mock.Vs.StringAt: no string at index %d. (%#v)", index, vs))
 	return ""
 }
 
@@ -169,6 +163,5 @@ func (vs Vs) ErrorAt(index int) error {
 			return v
 		}
 	}
-	panic(fmt.Sprintf("mock.Vs.ErrorAt: no error at index %d. (%#v)", index, vs))
 	return nil
 }
