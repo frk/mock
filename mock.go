@@ -19,17 +19,20 @@ type Call struct {
 
 // match is a helper method that checks whether the given Call has
 // the same func name and the same arguments as the receiver Call.
-func (c Call) match(k Call) bool {
-	return (c.Func == k.Func) && reflect.DeepEqual(c.In, k.In)
+func (c Call) match(k Call) error {
+	if c.Func != k.Func {
+		return &BadFuncCallError{got: c.Func, want: k.Func}
+	}
+	if !reflect.DeepEqual(c.In, k.In) {
+		return &BadCallInputError{fn: c.Func, got: c.In, want: k.In}
+	}
+	return nil
 }
 
 // Context
 type Context struct {
 	want []Call
 	got  []Call
-	res  []bool
-	nth  int
-
 	errs []error
 }
 
@@ -72,28 +75,14 @@ func (ctx *Context) Got(got Call) Vs {
 
 // match returns the matching expected Call to the given actual Call.
 func (ctx *Context) match(got Call) Call {
-	var ok bool
 	var want Call
 	if ln := len(ctx.got); ln < len(ctx.want) {
-		if w := ctx.want[ln]; w.match(got) {
-			want = w
-			ok = true
+		want = ctx.want[ln]
+		if err := want.match(got); err != nil {
+			ctx.errs = append(ctx.errs, err)
 		}
 	}
 	ctx.got = append(ctx.got, got)
-	ctx.res = append(ctx.res, ok)
-
-	// Before setting pointer values, make sure to compare the expected
-	// call with the actual call since Set changes the value of the actual
-	// call's input, effectivelly modifying the call's value.
-	{
-		if got.Func != want.Func {
-			ctx.errs = append(ctx.errs, &BadFuncCallError{got: got.Func, want: want.Func})
-		}
-		if !reflect.DeepEqual(got.In, want.In) {
-			ctx.errs = append(ctx.errs, &BadCallInputError{fn: got.Func, got: got.In, want: want.In})
-		}
-	}
 
 	for i, val := range want.Set {
 		if val == X {
@@ -106,7 +95,6 @@ func (ctx *Context) match(got Call) Call {
 		if gv.Kind() == reflect.Ptr && (gv.Elem().Type() == wv.Type()) {
 			gv.Elem().Set(wv)
 		} else {
-
 			log.Println("no match:", gv.Elem().Type(), wv.Type())
 		}
 	}
