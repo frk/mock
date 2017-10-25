@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"log"
 	"reflect"
 )
 
@@ -28,6 +29,8 @@ type Context struct {
 	got  []Call
 	res  []bool
 	nth  int
+
+	errs []error
 }
 
 // New allocates and returns a new Context.
@@ -80,6 +83,18 @@ func (ctx *Context) match(got Call) Call {
 	ctx.got = append(ctx.got, got)
 	ctx.res = append(ctx.res, ok)
 
+	// Before setting pointer values, make sure to compare the expected
+	// call with the actual call since Set changes the value of the actual
+	// call's input, effectivelly modifying the call's value.
+	{
+		if got.Func != want.Func {
+			ctx.errs = append(ctx.errs, &BadFuncCallError{got: got.Func, want: want.Func})
+		}
+		if !reflect.DeepEqual(got.In, want.In) {
+			ctx.errs = append(ctx.errs, &BadCallInputError{fn: got.Func, got: got.In, want: want.In})
+		}
+	}
+
 	for i, val := range want.Set {
 		if val == X {
 			continue
@@ -90,6 +105,9 @@ func (ctx *Context) match(got Call) Call {
 
 		if gv.Kind() == reflect.Ptr && (gv.Elem().Type() == wv.Type()) {
 			gv.Elem().Set(wv)
+		} else {
+
+			log.Println("no match:", gv.Elem().Type(), wv.Type())
 		}
 	}
 	return want
@@ -99,15 +117,8 @@ func (ctx *Context) Err() error {
 	if got, want := len(ctx.got), len(ctx.want); got != want {
 		return &BadNumCallError{got: got, want: want}
 	}
-	for i, want := range ctx.want {
-		got := ctx.got[i]
-
-		if got.Func != want.Func {
-			return &BadFuncCallError{got: got.Func, want: want.Func}
-		}
-		if !reflect.DeepEqual(got.In, want.In) {
-			return &BadCallInputError{fn: got.Func, got: got.In, want: want.In}
-		}
+	if len(ctx.errs) > 0 {
+		return ctx.errs[0]
 	}
 	return nil
 }
@@ -155,6 +166,15 @@ func (vs Vs) StringAt(index int) string {
 		}
 	}
 	return ""
+}
+
+func (vs Vs) BytesAt(index int) []byte {
+	if len(vs) > index {
+		if v, ok := vs[index].([]byte); ok {
+			return v
+		}
+	}
+	return nil
 }
 
 func (vs Vs) ErrorAt(index int) error {
