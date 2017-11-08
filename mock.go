@@ -1,3 +1,4 @@
+// Package mock provides a type named Context which can be used to mock out one or more dependencies.
 package mock
 
 import (
