@@ -2,7 +2,6 @@ package mock
 
 import (
 	"errors"
-	//"reflect"
 	"testing"
 )
 
