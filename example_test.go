@@ -12,7 +12,7 @@ type user struct {
 
 // An interface to be mocked.
 type api interface {
-	fetch(*user) error
+	fetch(int, *user) error
 }
 
 // A 2nd interface to be mocked.
@@ -23,8 +23,8 @@ type database interface {
 // Mock implementation of the api interface.
 type mockapi struct{ *Context }
 
-func (m *mockapi) fetch(u *user) error {
-	return m.Got(Call{Func: "fetch", In: Vs{u}, Set: Vs{u}}).ErrorAt(0)
+func (m *mockapi) fetch(id int, u *user) error {
+	return m.Got(Call{Func: "fetch", In: Vs{id, u}, Set: Vs{u}}).ErrorAt(0)
 }
 
 // Mock implementation of the datebase interface.
@@ -35,9 +35,9 @@ func (m *mockdb) save(u *user) error {
 }
 
 // The function to be tested has two dependencies that can be mocked.
-func dostuff(cl api, db database) (*user, error) {
+func dostuff(id int, cl api, db database) (*user, error) {
 	u := &user{}
-	if err := cl.fetch(u); err != nil {
+	if err := cl.fetch(id, u); err != nil {
 		return nil, err
 	}
 
@@ -55,23 +55,27 @@ func ExampleContext() {
 	dberr := errors.New("db error")
 
 	tests := []struct {
+		id    int
 		calls []Call
 		want  *user
 		err   error
 	}{{
+		id: 111,
 		calls: []Call{
-			FN("fetch", &user{}).OUT(clerr),
+			FN("fetch", 111, &user{}).OUT(clerr),
 		},
 		err: clerr,
 	}, {
+		id: 222,
 		calls: []Call{
-			FN("fetch", &user{}).SET(user{"Joe"}),
+			FN("fetch", 222, &user{}).SET(user{"Joe"}),
 			FN("save", &user{"Joe"}).OUT(dberr),
 		},
 		err: dberr,
 	}, {
+		id: 333,
 		calls: []Call{
-			FN("fetch", &user{}).SET(user{"John"}),
+			FN("fetch", 333, &user{}).SET(user{"John"}),
 			FN("save", &user{"John"}),
 		},
 		want: &user{"John"},
@@ -86,7 +90,7 @@ func ExampleContext() {
 		db := &mockdb{m}
 
 		// Execute the function under test.
-		got, err := dostuff(cl, db)
+		got, err := dostuff(tt.id, cl, db)
 
 		// Compare the output.
 		if err != tt.err {
