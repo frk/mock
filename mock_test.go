@@ -55,7 +55,7 @@ func TestMock(t *testing.T) {
 	}, {
 		name: "plain call",
 		calls: []Call{
-			{Func: "serve1"},
+			FN("serve1"),
 		},
 		exec: func(s service, t *testing.T) {
 			s.serve1()
@@ -63,9 +63,9 @@ func TestMock(t *testing.T) {
 	}, {
 		name: "plain call multi",
 		calls: []Call{
-			{Func: "serve1"},
-			{Func: "serve1"},
-			{Func: "serve1"},
+			FN("serve1"),
+			FN("serve1"),
+			FN("serve1"),
 		},
 		exec: func(s service, t *testing.T) {
 			s.serve1()
@@ -75,7 +75,7 @@ func TestMock(t *testing.T) {
 	}, {
 		name: "call with input",
 		calls: []Call{
-			{Func: "serve2", In: Vs{"hello", true}},
+			FN("serve2", "hello", true),
 		},
 		exec: func(s service, t *testing.T) {
 			s.serve2("hello", true)
@@ -83,9 +83,9 @@ func TestMock(t *testing.T) {
 	}, {
 		name: "call with input multi",
 		calls: []Call{
-			{Func: "serve2", In: Vs{"foo", false}},
-			{Func: "serve1"},
-			{Func: "serve2", In: Vs{"bar", true}},
+			FN("serve2", "foo", false),
+			FN("serve1"),
+			FN("serve2", "bar", true),
 		},
 		exec: func(s service, t *testing.T) {
 			s.serve2("foo", false)
@@ -95,7 +95,7 @@ func TestMock(t *testing.T) {
 	}, {
 		name: "call with input and output",
 		calls: []Call{
-			{Func: "serve3", In: Vs{"foo", "bar"}, Out: Vs{123, nil}},
+			FN("serve3", "foo", "bar").OUT(123, nil),
 		},
 		exec: func(s service, t *testing.T) {
 			got1, got2 := s.serve3("foo", "bar")
@@ -110,10 +110,10 @@ func TestMock(t *testing.T) {
 	}, {
 		name: "call with input and output multi",
 		calls: []Call{
-			{Func: "serve3", In: Vs{"foo", "bar"}, Out: Vs{123, nil}},
-			{Func: "serve1"},
-			{Func: "serve2", In: Vs{"bar", true}},
-			{Func: "serve3", In: Vs{"hello", "world", "!"}, Out: Vs{987, _err}},
+			FN("serve3", "foo", "bar").OUT(123, nil),
+			FN("serve1"),
+			FN("serve2", "bar", true),
+			FN("serve3", "hello", "world", "!").OUT(987, _err),
 		},
 		exec: func(s service, t *testing.T) {
 			got1, got2 := s.serve3("foo", "bar")
@@ -140,7 +140,7 @@ func TestMock(t *testing.T) {
 	}, {
 		name: "call with pointer indirection",
 		calls: []Call{
-			{Func: "serve4", In: Vs{"foobar", &_num}, Out: Vs{_err}, Set: Vs{557}},
+			FN("serve4", "foobar", &_num).SET(557).OUT(_err),
 		},
 		exec: func(s service, t *testing.T) {
 			num := _num

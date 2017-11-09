@@ -23,19 +23,19 @@ type Call struct {
 	Set Vs
 }
 
-// FnCall is a convenience constructor that returns a new instance of Call.
-func FnCall(fn string, in ...interface{}) Call {
+// FN is a convenience constructor that returns a new instance of Call.
+func FN(fn string, in ...interface{}) Call {
 	return Call{Func: fn, In: Vs(in)}
 }
 
-// Outp returns a copy of the receiver with its Out set to the given out parameters.
-func (c Call) Outp(out ...interface{}) Call {
+// OUT returns a copy of the receiver with its Out set to the given out parameters.
+func (c Call) OUT(out ...interface{}) Call {
 	c.Out = Vs(out)
 	return c
 }
 
-// Setp returns a copy of the receiver with its Set set to the given set parameters.
-func (c Call) Setp(set ...interface{}) Call {
+// SET returns a copy of the receiver with its Set set to the given set parameters.
+func (c Call) SET(set ...interface{}) Call {
 	c.Set = Vs(set)
 	return c
 }

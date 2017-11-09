@@ -60,19 +60,19 @@ func ExampleContext() {
 		err   error
 	}{{
 		calls: []Call{
-			FnCall("fetch", &user{}).Outp(clerr),
+			FN("fetch", &user{}).OUT(clerr),
 		},
 		err: clerr,
 	}, {
 		calls: []Call{
-			FnCall("fetch", &user{}).Setp(user{"Joe"}),
-			FnCall("save", &user{"Joe"}).Outp(dberr),
+			FN("fetch", &user{}).SET(user{"Joe"}),
+			FN("save", &user{"Joe"}).OUT(dberr),
 		},
 		err: dberr,
 	}, {
 		calls: []Call{
-			FnCall("fetch", &user{}).Setp(user{"John"}),
-			FnCall("save", &user{"John"}),
+			FN("fetch", &user{}).SET(user{"John"}),
+			FN("save", &user{"John"}),
 		},
 		want: &user{"John"},
 	}}
