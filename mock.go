@@ -44,10 +44,19 @@ func (c Call) SET(set ...interface{}) Call {
 // the same func name and the same arguments as the receiver Call.
 func (c Call) match(k Call) error {
 	if c.Func != k.Func {
-		return &BadFuncCallError{got: c.Func, want: k.Func}
+		return &BadFuncCallError{got: k.Func, want: c.Func}
 	}
 	if !reflect.DeepEqual(c.In, k.In) {
-		return &BadCallInputError{fn: c.Func, got: c.In, want: k.In}
+		return &BadCallInputError{fn: c.Func, got: k.In, want: c.In}
+	}
+
+	// Fail only if c.Set is not empty and different in length than k.Set.
+	// An empty c.Set regardless of k.Set is OK.
+	// If an argument can be set by a function using pointer indirection but
+	// can also be left unset if that function fails with an error it makes
+	// sense to allow the programmer to not have to specify the fake Set value.
+	if len(c.Set) > 0 && len(c.Set) != len(k.Set) {
+		return &BadCallSetLenError{fn: c.Func, got: k.Set, want: c.Set}
 	}
 	return nil
 }
@@ -100,7 +109,7 @@ func (ctx *Context) Got(got Call) Vs {
 // match returns the matching expected Call to the given actual Call.
 func (ctx *Context) match(got Call) Call {
 	var want Call
-	if ln := len(ctx.got); ln < len(ctx.want) {
+	if ln := len(ctx.got); len(ctx.want) > ln {
 		want = ctx.want[ln]
 		if err := want.match(got); err != nil {
 			ctx.errs = append(ctx.errs, err)
@@ -108,6 +117,9 @@ func (ctx *Context) match(got Call) Call {
 	}
 	ctx.got = append(ctx.got, got)
 
+	if len(want.Set) != len(got.Set) {
+		return want // bail early
+	}
 	for i, val := range want.Set {
 		if val == X {
 			continue

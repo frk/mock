@@ -81,7 +81,7 @@ func ExampleContext() {
 		want: &user{"John"},
 	}}
 
-	for _, tt := range tests {
+	for i, tt := range tests {
 		// Construct a new *Context with the list of expected calls.
 		m := Wants(tt.calls)
 
@@ -102,7 +102,7 @@ func ExampleContext() {
 
 		// Check that *Context received all the expected calls.
 		if err := m.Err(); err != nil {
-			fmt.Println(err)
+			fmt.Println(i, err)
 		}
 	}
 

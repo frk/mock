@@ -37,3 +37,12 @@ func (e *BadCallInputError) Error() string {
 	}
 	return fmt.Sprintf("mock: %q Call In\n got: %s\nwant: %s", e.fn, got, want)
 }
+
+type BadCallSetLenError struct {
+	fn        string
+	got, want Vs
+}
+
+func (e *BadCallSetLenError) Error() string {
+	return fmt.Sprintf("mock: %q Call Set\n got: %v\nwant: %v", e.fn, e.got, e.want)
+}
